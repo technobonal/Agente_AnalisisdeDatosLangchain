@@ -1,275 +1,166 @@
-import os
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain.tools import tool
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import streamlit as st
-from langchain.agents import Tool
-from langchain_experimental.tools import PythonAstREPLTool
+import pandas as pd
+import os
 
-load_dotenv()
+from langchain_groq import ChatGroq
+from langchain.prompts import PromptTemplate
+from langchain.agents import create_react_agent, AgentExecutor
+from herramientas import crear_herramientas
 
-# =====================================================================
-# CASCADA DE MODELOS (GROQ, vía endpoint OpenAI-compatible)
-# Nivel 1: openai/gpt-oss-120b (Principal)
-# Nivel 2: openai/gpt-oss-20b (Respaldo 1)
-# Nivel 3: qwen/qwen3.6-27b (Respaldo 2)
-# =====================================================================
+# Inicia la aplicación
+st.set_page_config(page_title="Asistente de Análisis de Datos con IA", layout="centered")
+st.title("🦜 Asistente de Análisis de Datos con IA")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
+st.info("""
+Este asistente utiliza un agente, creado con Langchain, para ayudarte a explorar, analizar y visualizar datos de forma interactiva.
+Basta con subir un archivo CSV y podrás generar reportes y gráficos automáticamente.
+""")
 
-modelo_principal = ChatOpenAI(
-    api_key=GROQ_API_KEY,
-    base_url=BASE_URL,
-    model="openai/gpt-oss-120b",
-    temperature=0
-)
+# Upload de CSV
+st.markdown("### 📁 Realiza la carga de tu archivo CSV")
+archivo_cargado = st.file_uploader("Selecciona un archivo CSV", type="csv", label_visibility="collapsed")
 
-respaldo_1 = ChatOpenAI(
-    api_key=GROQ_API_KEY,
-    base_url=BASE_URL,
-    model="openai/gpt-oss-20b",
-    temperature=0
-)
+if archivo_cargado:
+    df = pd.read_csv(archivo_cargado)
+    st.success("Archivo cargado exitosamente!")
+    st.markdown("### 🔍 Primeras filas de tu conjunto de datos")
+    st.dataframe(df.head())
 
-respaldo_2 = ChatOpenAI(
-    api_key=GROQ_API_KEY,
-    base_url=BASE_URL,
-    model="qwen/qwen3.6-27b",
-    temperature=0
-)
-
-llm = modelo_principal.with_fallbacks([respaldo_1, respaldo_2])
-
-# Herramienta de informaciones
-@tool
-def informacion_df(pregunta:str, df:pd.DataFrame) -> str:
-    """
-    Utiliza esta herramienta siempre que el usuario solicite informaciones generales sobre el
-    DataFrame, incluyendo el número de columnas y filas, nombres de las columnas y sus tipos de 
-    datos, conteo de datos nulos y duplicados para dar un panorama general sobre el archivo.
-    """
-    shape = df.shape
-    columns = df.dtypes
-    nulos = df.isnull().sum()
-    nans_str = df.apply(lambda col: col[~col.isna()].astype(str).str.strip().str.lower().eq('nan').sum())
-    duplicados = df.duplicated().sum()
-
-    plantilla_respuesta = PromptTemplate(
-    template = """
-               Eres un analista de datos encargado de presentar un resumen informativo sobre un **DataFrame** a partir de una {pregunta} hecha por el usuario.
-
-                A continuación, encontrarás la información general de la base de datos:
-
-                ================= INFORMACIÓN DEL DATAFRAME =================
-
-                Dimensiones: {shape}
-
-                Columnas y tipos de datos:
-                {columns}
-
-                Valores nulos por columna:
-                {nulos}
-
-                Cadenas 'nan' (en cualquier capitalización) por columna:
-                {nans_str}
-
-                Filas duplicadas: {duplicados}
-
-                ============================================================
-
-                Con base en esta información, redacta un resumen claro y organizado que contenga:
-
-                1. Un título: ## Informe de información general sobre el dataset,
-                2. La dimensión total del DataFrame;
-                3. La descripción de cada columna (incluyendo nombre, tipo de dato y qué representa esa columna);
-                4. Las columnas que contienen datos nulos, con la respectiva cantidad;
-                5. Las columnas que contienen cadenas 'nan', con la respectiva cantidad;
-                6. La existencia (o no) de datos duplicados;
-                7. Un párrafo sobre los análisis que se pueden realizar con estos datos;
-                8. Un párrafo sobre los tratamientos que se pueden aplicar a los datos.
-               """,
-               input_variables = ['pregunta','shape','columns','nulos','nans_str','duplicados']
+    # =====================================================================
+    # CASCADA DE MODELOS (GROQ)
+    # Nivel 1: openai/gpt-oss-120b (Principal)
+    # Nivel 2: openai/gpt-oss-20b (Respaldo 1)
+    # Nivel 3: qwen/qwen3.6-27b (Respaldo 2)
+    # =====================================================================
+    
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    
+    # 1. Groq Principal
+    groq_principal = ChatGroq(
+        api_key=GROQ_API_KEY,
+        model_name="openai/gpt-oss-120b",
+        temperature=0,
+        reasoning_effort="low"
+    )
+    
+    # 2. Groq Respaldo 1
+    groq_respaldo_1 = ChatGroq(
+        api_key=GROQ_API_KEY,
+        model_name="openai/gpt-oss-20b",
+        temperature=0,
+        reasoning_effort="low"
     )
 
-    cadena = plantilla_respuesta | llm | StrOutputParser()
-    respuesta = cadena.invoke({"pregunta":pregunta,
-                                "shape":shape,
-                                "columns":columns,
-                                "nulos":nulos,
-                                "nans_str":nans_str,
-                                "duplicados":duplicados
-                                })    
-    return respuesta
-
-# Herramienta de resumen estadístico
-@tool
-def resumen_estadistico(pregunta: str, df:pd.DataFrame) -> str:
-    """
-    Utiliza esta herramienta siempre que el usuario solicite un resumen estadístico completo
-    y descriptivo de la base de datos, incluyendo varias estadísticas (promedio, desvío típico, 
-    mínimo, máximo, etc.).
-    """
-
-    resumen = df.describe(include='number').transpose().to_string()
-    plantilla_respuesta = PromptTemplate(
-        template = """
-        Eres un analista de datos encargado de interpretar resultados estadísticos de una base de datos a partir de una {pregunta} realizada por el usuario.
-        
-            A continuación, encontrarás las estadísticas descriptivas de la base de datos:
-
-            ================= ESTADÍSTICAS DESCRIPTIVAS =================
-
-            {resumen}
-
-            ============================================================
-        
-
-        Con base en estos datos, elabora un resumen explicativo con un lenguaje claro, accesible y fluido, destacando los principales puntos de los resultados. Incluye:
-        
-            1. Un título: ## Informe de estadísticas descriptivas;  
-            2. Una visión general de las estadísticas de las columnas numéricas;  
-            3. Un párrafo sobre cada una de las columnas, comentando información sobre sus valores;  
-            4. Identificación de posibles valores atípicos con base en los valores mínimo y máximo;  
-            5. Recomendaciones de próximos pasos en el análisis en función de los patrones identificados.          
-        """,
-        input_variables = ['pregunta','resumen']
+    # 3. Groq Respaldo 2
+    groq_respaldo_2 = ChatGroq(
+        api_key=GROQ_API_KEY,
+        model_name="qwen/qwen3.6-27b",
+        temperature=0
     )
 
-    cadena = plantilla_respuesta | llm | StrOutputParser()
-    respuesta = cadena.invoke({"pregunta":pregunta,
-                               "resumen": resumen})
-    return respuesta
+    # Encadenamos: LangChain intentará el principal, luego el respaldo 1, luego el 2.
+    llm = groq_principal.with_fallbacks([groq_respaldo_1, groq_respaldo_2])
+    
+    # =====================================================================
 
-# Herramienta de generar gráficos
-@tool
-def generar_grafico(pregunta: str, df:pd.DataFrame) -> str:
-    """
-    Utiliza esta herramienta siempre que el usuario solicite un gráfico a partir de un DataFrame
-    pandas (`df`) con base en una instrucción del usuario. La instrucción podrá contener solicitudes
-    como por ejemplo: 'Crea un gráfico de promedio de tiempo de entrega por clima', 'Grafica la 
-    distribución del tiempo de entrega', 'Haz un plot de la relación entre la clasificación de los
-    agentes y el tiempo de entrega', entre otros. Las Palabras-clave comunes que indican el uso de 
-    esta herramienta incluyen: 'crea un gráfico', 'haz un plot', 'visualiza', 'muestra la distribución', 'representación visual', etc.
-    """
+    # Herramientas
+    tools = crear_herramientas(df)
 
-    columnas_info = '\n'.join([f"- {col} ({dtype})" for col,dtype in df.dtypes.items()])
-    muestra_datos = df.head(3).to_dict(orient='records')
+    # Prompt react
+    df_head = df.head().to_markdown()
 
-    plantilla_respuesta = PromptTemplate( 
-        template = """
-        Eres un especialista en visualización de datos. Tu tarea es generar **únicamente el código Python** para graficar con base en la solicitud del usuario.
+    prompt_react_es = PromptTemplate(
+        input_variables=["input", "agent_scratchpad", "tools", "tool_names"],
+        partial_variables={"df_head": df_head},
+        template="""
+            Eres un asistente que responde en castellano.
 
-        ## Solicitud del usuario:
-        "{pregunta}"
+            Tienes acceso a un dataframe pandas llamado `df`.
+            Aquí están las primeras filas del DataFrame, obtenidas usando `df.head().to_markdown()`:
+            
+            {df_head}
 
-        ## Metadatos del DataFrame:
-        {columnas}
+            Responde a las siguientes preguntas de la mejor manera posible.
+            Para este fin, tienes acceso a las siguientes herramientas:
 
-        ## Muestra de los datos (3 primeras filas):
-        {muestra}
+            {tools}
 
-        ## Instrucciones obligatorias:
-        1. Usa las bibliotecas `matplotlib.pyplot` (como `plt`) y `seaborn` (como `sns`);
-        2. Define el tema con `sns.set_theme()`;
-        3. Asegúrate de que todas las columnas mencionadas en la solicitud existan en el DataFrame llamado `df`;
-        4. Elige el tipo de gráfico adecuado según el análisis solicitado:
-        - **Distribución de variables numéricas**: `histplot`, `kdeplot`, `boxplot` o `violinplot`
-        - **Distribución de variables categóricas**: `countplot`
-        - **Comparación entre categorías**: `barplot`
-        - **Relación entre variables**: `scatterplot`
-        - **Series temporales**: `lineplot`, con el eje X formateado como fechas
-        5. Configura el tamaño del gráfico con `figsize=(8, 4)`;
-        6. Añade título y etiquetas (`labels`) apropiadas a los ejes;
-        7. Posiciona el título a la izquierda con `loc='left'`, deja el `pad=20` y usa `fontsize=14`;
-        8. Mantén los ticks del eje X sin rotación con `plt.xticks(rotation=0)`;
-        9. Elimina los bordes superior y derecho del gráfico con `sns.despine()`;
-        10. Finaliza el código con `plt.show()`.
+            Usa el siguiente formato:
 
-        Devuelve ÚNICAMENTE el código Python, sin ningún texto adicional ni explicación.
+            Question: La pregunta de entrada que debes responder
+            Thought: Debes siempre pensar en lo que debes hacer
+            Action: La acción que será ejecutada, debe ser una de las [{tool_names}]
+            Action Input: La entrada para la acción
+            Observation: El resultado de la acción
+            ... (este Thought/Action/Action Input/Observation puede repetirse N veces)
+            Thought: Ahora sé la respuesta final
+            Final Answer: La respuesta final para la pregunta de entrada inicial.
 
-        Código Python:
-        """,
-        input_variables = ['pregunta','columnas','muestra']
+            Comienza!
+
+            Question: {input}
+            Thought: {agent_scratchpad}
+        """
+        )
+
+    # Agente
+    agente = create_react_agent(llm=llm, tools=tools, prompt=prompt_react_es)
+    orquestador = AgentExecutor(
+        agent=agente,
+        tools=tools,
+        verbose=True,
+        handle_parsing_errors=True,
+        max_iterations=15,
+        max_execution_time=120
     )
 
-    cadena = plantilla_respuesta | llm | StrOutputParser()
-    script_bruto = cadena.invoke({"pregunta":pregunta,
-                               "columnas": columnas_info,
-                               "muestra":muestra_datos})
-    script_limpio = script_bruto.replace("```python","").replace("```","")
-    exec_globals = {"df":df,
-                    "plt":plt,
-                    "sns":sns}
-    exec_locals = {}
+    # ACCIONES RÁPIDAS
+    st.markdown("---")
+    st.markdown("## ⚡ Acciones rápidas")
 
-    exec(script_limpio, exec_globals, exec_locals)
-    fig = plt.gcf()
+    if st.button("📄 Reporte de Informaciones Generales", key="boton_reporte_general"):
+        with st.spinner("Analizando datos... 🦜"):
+            respuesta = orquestador.invoke({"input": "Quiero un reporte con informaciones sobre los datos"})
+            st.session_state['reporte_general'] = respuesta["output"]
 
-    st.pyplot(fig)
+    if 'reporte_general' in st.session_state:
+        with st.expander("Resultado: Reporte de Informaciones Generales"):
+            st.markdown(st.session_state['reporte_general'])
+            st.download_button(
+                label="📥 Descargar Reporte",
+                data=st.session_state['reporte_general'],
+                file_name="reporte_informaciones_generales.md",
+                mime="text/markdown"
+            )
 
-    return ""
+    if st.button("📄 Reporte de estadísticas descriptivas", key="boton_reporte_estadisticas"):
+        with st.spinner("Analizando datos... 🦜"):
+            respuesta = orquestador.invoke({"input": "Quiero un Reporte de estadísticas descriptivas"})
+            st.session_state['reporte_estadisticas'] = respuesta["output"]
 
-def crear_herramientas(df):
-    herramienta_informacion_df = Tool(
-    name = 'Informaciones DF',
-    func = lambda pregunta: informacion_df.run({"pregunta":pregunta,"df":df}),
-    description = """
-                 Utilice esta herramienta siempre que el usuario solicite informaciones generales sobre el dataframe, 
-                 incluyendo el número de columnas y filas, nombres de las columnas, y sus tipos de datos, 
-                 conteo de datos nulos, y duplicados para dar un panorama general sobre el archivo.
-                  """,
-    return_direct = True
-    )
+    if 'reporte_estadisticas' in st.session_state:
+        with st.expander("Resultado: Reporte de estadísticas descriptivas"):
+            st.markdown(st.session_state['reporte_estadisticas'])
+            st.download_button(
+                label="📥 Descargar Reporte",
+                data=st.session_state['reporte_estadisticas'],
+                file_name="reporte_estadisticas_descritivas.md",
+                mime="text/markdown"  
+            )
+   
+    # PERGUNTA SOBRE LOS DATOS
+    st.markdown("---")
+    st.markdown("## 🔎 Preguntas sobre los datos")
+    pregunta_sobre_datos = st.text_input("Realiza una pregunta sobre los datos (ej: 'Cuál es el promedio de tiempo de entrega?')")
+    if st.button("Responder pregunta", key="responder_pregunta_datos"):
+        with st.spinner("Analizando los datos 🦜"):
+            respuesta = orquestador.invoke({"input": pregunta_sobre_datos})
+            st.markdown((respuesta["output"]))
 
-    herramienta_resumen_estadístico = Tool(
-        name = 'Resumen Estadístico',
-        func = lambda pregunta: resumen_estadistico.run({"pregunta":pregunta,"df":df}),
-        description = """
-                    Utilice esta herramienta siempre que el usuario solicite  un resumen estadístico completo 
-                    y descriptivo de la base de datos ,incluyendo varias estadísticas (promedio, desvío típico, 
-                    mínimo, máximo, etc.). No utilice esta herramienta para calcular una única métrica como 
-                    por ejemplo: 'Cuál es el promedio de x?' o 'Cuál es la correlación de las variables?' ; 
-                    en estos casos utiliza la herramienta_codigos_python.
-                    """,
-        return_direct = True
-    )
-
-    herramienta_generar_grafico = Tool(
-        name = 'Generar Gráfico',
-        func = lambda pregunta: generar_grafico.run({"pregunta":pregunta,"df":df}),
-        description = """
-                    Utilice esta herramienta siempre que el usuario solicite una gráfica a partir de un DataFrame pandas (`df`) 
-                    con base en una instrucción del usuario. La instrucción puede contener solicitudes tales como: 
-                    'Crea un gráfico de promedio de tiempo de entrega por clima', 
-                    'Haz un plot de la distribución del tiempo de entrega', 
-                    'Haz un plot entre la clasificación de los colaboradores y el tiempo de entrega'. 
-                    Las palabras-clave que indican el uso de esta herramienta incluyen: 'crea un gráfico', 
-                    'reliza un plot', 'plotea', 'visualiza', 'muestra la distribución', 
-                    'representa graficamente', entre otras.
-                    """,
-        return_direct = True
-    )
-
-    herramienta_codigos_python = Tool(
-        name = 'Herramienta Códigos de Python',
-        func = PythonAstREPLTool(locals={"df":df}),
-        description = """
-                    Utilice esta herramienta siempre que el usuario solicite cálculos, 
-                    consultas o transformaciones específicas usando Python directamente sobre el DataFrame (`df`). 
-                    Ejemplos de uso incluyen: 'Cuál es el promedio de la columna X?', 
-                    'Cuáles son los valores únicos de la columna Y?', 'Cuál es la correlación entre A y B?', 
-                    entre otros cálculos puntuales. Evita utilizar esta herramienta para solicitudes más 
-                    amplias o descriptivas tales como informaciones generales sobre el DataFrame, 
-                    resumenes estadísticos completos o la generación de gráficas; en estos casos, 
-                    utiliza las herramientas adecuadas.
-                    """,
-        return_direct = False
-    )
-
-    return [herramienta_informacion_df,herramienta_resumen_estadístico,herramienta_generar_grafico,herramienta_codigos_python]
+    # GENERACIÓN DE GRÁFICOS
+    st.markdown("---")
+    st.markdown("## 📊 Crear gráfico con base en una pregunta")
+    pregunta_grafico = st.text_input("Qué deseas visualizar? (ej: 'Genera un gráfico del promedio de tiempo de entrega por clima.')")
+    if st.button("Generar gráfico", key="generar_grafico"):
+        with st.spinner("Generando el gráfico 🦜"):
+            orquestador.invoke({"input": pregunta_grafico})

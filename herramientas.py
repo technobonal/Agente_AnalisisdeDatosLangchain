@@ -27,14 +27,16 @@ modelo_principal = ChatOpenAI(
     api_key=GROQ_API_KEY,
     base_url=BASE_URL,
     model="openai/gpt-oss-120b",
-    temperature=0
+    temperature=0,
+    model_kwargs={"reasoning_effort": "low"}
 )
 
 respaldo_1 = ChatOpenAI(
     api_key=GROQ_API_KEY,
     base_url=BASE_URL,
     model="openai/gpt-oss-20b",
-    temperature=0
+    temperature=0,
+    model_kwargs={"reasoning_effort": "low"}
 )
 
 respaldo_2 = ChatOpenAI(
