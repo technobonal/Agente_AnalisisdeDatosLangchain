@@ -1,0 +1,26 @@
+## Informe de estadísticas descriptivas
+
+El conjunto de datos proporcionado ofrece una visión general de las estadísticas descriptivas de varias columnas numéricas relacionadas con colaboradores, tiendas y entregas. En general, las estadísticas descriptivas nos permiten entender la distribución y los patrones en los datos, lo que es fundamental para cualquier análisis posterior.
+
+Las columnas numéricas incluyen "años_experiencia_colaborador", "clasificacion_colaborador", "latitud_tienda", "longitud_tienda", "latitud_entrega", "longitud_entrega" y "tiempo_entrega". Cada una de estas columnas proporciona información valiosa sobre diferentes aspectos de la operación, desde la experiencia de los colaboradores hasta la ubicación geográfica de las tiendas y los puntos de entrega, así como el tiempo que se tarda en realizar estas entregas.
+
+**Años de experiencia del colaborador**: La experiencia de los colaboradores muestra una media de 12.11 años, con una desviación estándar de 3.11 años. El rango de experiencia va desde 1 año hasta 20 años, lo que sugiere una fuerza laboral con una amplia gama de experiencia. El valor mínimo de 1 año podría indicar nuevos colaboradores, mientras que el máximo de 20 años refleja una gran cantidad de experiencia.
+
+**Clasificación del colaborador**: La clasificación de los colaboradores tiene una media de 4.63, con una desviación estándar muy baja de 0.33. Esto indica que la mayoría de los colaboradores se encuentran dentro de una clasificación similar, con poca variación. Los valores mínimo y máximo (1 y 5, respectivamente) sugieren un sistema de clasificación de 5 niveles, pero la concentración de valores alrededor de la media indica una posible homogeneidad en la clasificación.
+
+**Latitud y longitud de la tienda**: La latitud de la tienda tiene una media de 17.21 grados, con una desviación estándar de 7.76 grados, mientras que la longitud tiene una media de 70.66 grados, con una desviación estándar de 21.48 grados. Estos valores indican que las tiendas se encuentran en una variedad de ubicaciones geográficas, aunque el rango de latitudes y longitudes sugiere que la mayoría de las tiendas están ubicadas en el hemisferio norte, posiblemente en América del Norte o Asia. Los valores mínimo y máximo para ambas coordenadas geográficas (-30.90 y 30.91 grados para la latitud, y -88.37 y 88.43 grados para la longitud) cubren casi todo el rango de coordenadas geográficas posibles, lo que sugiere una presencia global.
+
+**Latitud y longitud de la entrega**: Similar a las coordenadas de la tienda, la latitud y longitud de la entrega tienen medias de 17.46 grados y 70.82 grados, respectivamente, con desviaciones estándar de 7.34 y 21.15 grados. Estos valores son muy similares a los de la tienda, lo que sugiere que los puntos de entrega están cerca de las tiendas o que las entregas se realizan en áreas geográficas similares. Los valores mínimo y máximo también son similares, aunque el valor mínimo para ambas coordenadas es 0.01, lo que podría indicar un error en la codificación o un valor atípico.
+
+**Tiempo de entrega**: El tiempo de entrega tiene una media de 124.91 minutos, con una desviación estándar de 51.92 minutos. El rango va desde 10 minutos hasta 270 minutos, lo que sugiere una variedad en los tiempos de entrega. El valor mínimo de 10 minutos podría indicar entregas muy rápidas, posiblemente en áreas urbanas, mientras que el máximo de 270 minutos refleja entregas que pueden tomar hasta 4.5 horas, lo que podría ser más típico de áreas rurales o de entregas a larga distancia.
+
+En cuanto a posibles valores atípicos, la presencia de valores mínimo y máximo extremos en algunas columnas (como la latitud y longitud de la tienda y la entrega) podría indicar errores en la codificación o valores que no son representativos de la mayoría de los datos. Por ejemplo, un valor de latitud de -30.90 grados y uno de 30.91 grados sugieren una distribución global, pero valores como 0.01 grados para la latitud y longitud de la entrega podrían ser errores.
+
+Recomendaciones para próximos pasos en el análisis:
+
+1. **Validación de datos**: Es importante validar los datos para identificar y corregir cualquier error en la codificación, especialmente aquellos que podrían estar afectando los valores mínimo y máximo.
+2. **Análisis de distribución**: Un análisis más detallado de la distribución de los datos, incluyendo histogramas y gráficos de dispersión, podría proporcionar más información sobre los patrones en los datos.
+3. **Correlación entre columnas**: Analizar la correlación entre las diferentes columnas podría ayudar a identificar relaciones entre variables, como si el tiempo de entrega está relacionado con la ubicación geográfica.
+4. **Modelado predictivo**: Con una comprensión más profunda de los patrones en los datos, se podrían desarrollar modelos predictivos para predecir variables como el tiempo de entrega basado en la ubicación y la experiencia del colaborador.
+
+En resumen, las estadísticas descriptivas proporcionan una visión general valiosa de los datos, pero es importante profundizar en el análisis para entender mejor los patrones y relaciones dentro de los datos.
