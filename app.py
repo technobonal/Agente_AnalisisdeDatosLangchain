@@ -57,7 +57,7 @@ if archivo_cargado:
     modelo_principal = ChatOpenAI(
         api_key=API_KEY,
         base_url=BASE_URL,
-        model="gpt-oss-120b",
+        model="openai/gpt-oss-120b",
         temperature=0
     )
     
@@ -65,7 +65,7 @@ if archivo_cargado:
     respaldo_1 = ChatOpenAI(
         api_key=API_KEY,
         base_url=BASE_URL,
-        model="gpt-oss-20b",
+        model="openai/gpt-oss-20b",
         temperature=0
     )
 
@@ -73,7 +73,7 @@ if archivo_cargado:
     respaldo_2 = ChatOpenAI(
         api_key=API_KEY,
         base_url=BASE_URL,
-        model="qwen3.6-27b", # Sin el prefijo qwen/
+        model="qwen/qwen3.6-27b", # Con el prefijo qwen/
         temperature=0
     )
 
