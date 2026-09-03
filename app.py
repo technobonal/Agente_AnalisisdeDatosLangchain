@@ -85,7 +85,12 @@ if archivo_cargado:
 
             {tools}
 
-            Usa el siguiente formato:
+            IMPORTANTE - Reglas de formato estrictas:
+            - NO uses markdown (nada de **negrita**, títulos con #, etc.) en las etiquetas Thought/Action/Action Input/Observation/Final Answer.
+            - Escribe las etiquetas de forma literal y plana, exactamente como aparecen abajo, cada una al inicio de su propia línea.
+            - En cada turno, escribe SOLO una de estas dos cosas, nunca ambas: o bien "Action:" + "Action Input:", o bien "Final Answer:". Nunca combines Action y Final Answer en la misma respuesta.
+
+            Usa el siguiente formato exacto (sin negritas ni otro formato):
 
             Question: La pregunta de entrada que debes responder
             Thought: Debes siempre pensar en lo que debes hacer
