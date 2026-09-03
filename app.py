@@ -38,25 +38,25 @@ if archivo_cargado:
     # 1. Groq Principal
     groq_principal = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="openai/gpt-oss-120b",
+        model_name="llama-3.3-70b-versatile",
         temperature=0
     )
     
-    # 2. Groq Respaldo 1
+    # 2. Groq Respaldo 1 
     groq_respaldo_1 = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="openai/gpt-oss-20b",
+        model_name="llama-3.1-8b-instant",
         temperature=0
     )
 
     # 3. Groq Respaldo 2
     groq_respaldo_2 = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="qwen/qwen3.6-27b",
+        model_name="mixtral-8x7b-32768",
         temperature=0
     )
 
-    # Encadenamos: LangChain intentará el principal, luego el respaldo 1, luego el 2.
+    # Encadenamos
     llm = groq_principal.with_fallbacks([groq_respaldo_1, groq_respaldo_2])
     
     # =====================================================================
