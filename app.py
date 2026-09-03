@@ -40,30 +40,45 @@ if archivo_cargado:
     
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     
-    # 1. Groq Principal (Llama 3 70B - Alta capacidad)
-    groq_principal = ChatGroq(
-        api_key=GROQ_API_KEY,
-        model_name="llama3-70b-8192",
+   # =====================================================================
+    # CASCADA DE MODELOS (USANDO TU SERVIDOR/PROXY PERSONALIZADO)
+    # =====================================================================
+    from langchain_openai import ChatOpenAI
+    
+    # La API KEY que usa tu servidor
+    API_KEY = os.getenv("GROQ_API_KEY")
+    
+    # IMPORTANTE: Aquí debes poner la URL de tu servidor proxy o LiteLLM.
+    # Si no la sabes, revisa a dónde apuntaba tu litellm en DataqualityAgent.
+    # Si usas un servicio en la nube genérico, pon su URL (ej: "https://api.tu-servidor.com/v1")
+    BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1") # <-- CAMBIA ESTO POR TU URL
+    
+    # 1. Principal (El que acabas de mencionar)
+    modelo_principal = ChatOpenAI(
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        model="gpt-oss-120b",
         temperature=0
     )
     
-    # 2. Groq Respaldo 1 (Llama 3 8B - Rápido)
-    groq_respaldo_1 = ChatGroq(
-        api_key=GROQ_API_KEY,
-        model_name="llama3-8b-8192",
+    # 2. Respaldo 1
+    respaldo_1 = ChatOpenAI(
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        model="gpt-oss-20b",
         temperature=0
     )
 
-    # 3. Groq Respaldo 2 (Mixtral 8x7B)
-    groq_respaldo_2 = ChatGroq(
-        api_key=GROQ_API_KEY,
-        model_name="mixtral-8x7b-32768",
+    # 3. Respaldo 2 (Qwen)
+    respaldo_2 = ChatOpenAI(
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        model="qwen3.6-27b", # Sin el prefijo qwen/
         temperature=0
     )
 
     # Encadenamos
-    llm = groq_principal.with_fallbacks([groq_respaldo_1, groq_respaldo_2])
-    # =====================================================================
+    llm = modelo_principal.with_fallbacks([respaldo_1, respaldo_2])
 
     # Herramientas
     tools = crear_herramientas(df)
