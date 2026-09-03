@@ -51,7 +51,7 @@ if archivo_cargado:
     # IMPORTANTE: Aquí debes poner la URL de tu servidor proxy o LiteLLM.
     # Si no la sabes, revisa a dónde apuntaba tu litellm en DataqualityAgent.
     # Si usas un servicio en la nube genérico, pon su URL (ej: "https://api.tu-servidor.com/v1")
-    BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1") # <-- CAMBIA ESTO POR TU URL
+    BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1") # <-- CAMBIA ESTO POR TU URL
     
     # 1. Principal (El que acabas de mencionar)
     modelo_principal = ChatOpenAI(
