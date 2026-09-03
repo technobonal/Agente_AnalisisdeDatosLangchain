@@ -35,21 +35,26 @@ if archivo_cargado:
     
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     
-    # 1. Groq Principal
+    #CASCADA DE MODELOS (GROQ OFICIAL - IDs ESTABLES)
+    # =====================================================================
+    
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    
+    # 1. Groq Principal (Llama 3 70B - Alta capacidad)
     groq_principal = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="llama-3.3-70b-versatile",
+        model_name="llama3-70b-8192",
         temperature=0
     )
     
-    # 2. Groq Respaldo 1 
+    # 2. Groq Respaldo 1 (Llama 3 8B - Rápido)
     groq_respaldo_1 = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="llama-3.1-8b-instant",
+        model_name="llama3-8b-8192",
         temperature=0
     )
 
-    # 3. Groq Respaldo 2
+    # 3. Groq Respaldo 2 (Mixtral 8x7B)
     groq_respaldo_2 = ChatGroq(
         api_key=GROQ_API_KEY,
         model_name="mixtral-8x7b-32768",
@@ -58,7 +63,6 @@ if archivo_cargado:
 
     # Encadenamos
     llm = groq_principal.with_fallbacks([groq_respaldo_1, groq_respaldo_2])
-    
     # =====================================================================
 
     # Herramientas
